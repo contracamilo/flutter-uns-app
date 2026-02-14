@@ -1,0 +1,60 @@
+## ============================================================
+## FILE: pubspec.yaml
+## PURPOSE: Project manifest - defines your app's identity, dependencies, and assets.
+##
+## CONCEPTS TAUGHT:
+##   - 'name': Must match the Dart package name (lowercase_with_underscores).
+##   - 'publish_to: none': Prevents accidental publication to pub.dev.
+##   - 'environment.sdk': Constrains the Dart SDK version using semantic versioning.
+##     '^3.9.0' means ">=3.9.0 and <4.0.0".
+##   - 'dependencies': Packages your app needs at runtime.
+##   - 'dev_dependencies': Packages only needed during development (testing, linting).
+##   - Version syntax: '^1.0.0' means "compatible with 1.0.0" (>=1.0.0 <2.0.0).
+##     This follows semantic versioning (semver): major.minor.patch
+## ============================================================
+
+name: unisalle
+description: A learning-focused e-commerce Flutter boilerplate with heavy documentation.
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.9.0
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # STATE MANAGEMENT: Riverpod wraps your entire app in a ProviderScope,
+  # giving any widget access to shared state without passing it down manually.
+  # We use flutter_riverpod (not riverpod alone) because it provides
+  # ConsumerWidget and other Flutter-specific integrations.
+  flutter_riverpod: ^2.6.1
+
+  # NAVIGATION: GoRouter provides declarative, URL-based routing.
+  # This means routes are defined as data (a list of GoRoute objects),
+  # not imperatively (Navigator.push). This is essential for web (URL bar)
+  # and deep linking on mobile.
+  go_router: ^14.8.1
+
+  # FORMATTING: The intl package provides number/currency/date formatting
+  # that respects locale. We use it for price display (e.g., "$79.99").
+  intl: ^0.20.2
+
+  # TYPOGRAPHY: Google Fonts lets you use any font from fonts.google.com
+  # without downloading font files. It fetches them at runtime (and caches).
+  google_fonts: ^6.2.1
+
+  # iOS-style icons (included by default in Flutter projects)
+  cupertino_icons: ^1.0.8
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+
+  # Linting rules that enforce Dart/Flutter best practices.
+  # These catch common mistakes at compile time before they become bugs.
+  flutter_lints: ^5.0.0
+
+flutter:
+  uses-material-design: true
