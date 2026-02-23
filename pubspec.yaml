@@ -48,6 +48,11 @@ dependencies:
   # iOS-style icons (included by default in Flutter projects)
   cupertino_icons: ^1.0.8
 
+  # ICONS: Font Awesome provides brand icons (Google, GitHub, etc.)
+  # and thousands of other icons not available in Material Icons.
+  # Use FaIcon(FontAwesomeIcons.google) instead of Icon(Icons...).
+  font_awesome_flutter: ^10.7.0
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
