@@ -19,6 +19,9 @@
 // ============================================================
 
 abstract class RouteNames {
+  static const String welcome = 'welcome';
+  static const String login = 'login';
+  static const String register = 'register';
   static const String catalog = 'catalog';
   static const String productDetail = 'product-detail';
   static const String cart = 'cart';

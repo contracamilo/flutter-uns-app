@@ -27,8 +27,15 @@
 //
 //   - Router as a Provider: Making the router a Riverpod Provider
 //     allows it to react to state changes (e.g., redirect to login
-//     when auth state changes). Here it's read-only, but the pattern
-//     scales for auth-guarded routes.
+//     when auth state changes).
+//
+//   - redirect: A global guard that checks auth state on every
+//     navigation. If the user is not authenticated and tries to
+//     access a protected page, they get sent to /login.
+//
+//   - refreshListenable + auth state: The router watches the auth
+//     provider. When the user logs in or out, the router re-evaluates
+//     redirects and navigates accordingly.
 //
 //   - navigatorKey: Each branch gets its own navigator key, which
 //     GoRouter uses to manage the navigation stack independently
@@ -39,6 +46,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:unisalle/core/router/route_names.dart';
+import 'package:unisalle/features/auth/presentation/screens/welcome_screen.dart';
+import 'package:unisalle/features/auth/presentation/screens/login_screen.dart';
+import 'package:unisalle/features/auth/presentation/screens/register_screen.dart';
+import 'package:unisalle/features/auth/providers/auth_provider.dart';
 import 'package:unisalle/features/catalog/presentation/screens/catalog_screen.dart';
 import 'package:unisalle/features/cart/presentation/screens/cart_screen.dart';
 import 'package:unisalle/features/favorites/presentation/screens/favorites_screen.dart';
@@ -52,25 +63,52 @@ final _catalogNavigatorKey = GlobalKey<NavigatorState>();
 final _favoritesNavigatorKey = GlobalKey<NavigatorState>();
 final _cartNavigatorKey = GlobalKey<NavigatorState>();
 
-/// The router provider. This is a read-only Provider (not a Notifier)
-/// because the router configuration doesn't change at runtime.
-///
-/// To use in a widget:
-///   final router = ref.watch(routerProvider);
-///
-/// To navigate programmatically:
-///   context.goNamed(RouteNames.productDetail, pathParameters: {'productId': id});
-///   // or
-///   context.go('/catalog/product/$id');
+/// Auth pages that don't require authentication.
+const _authPaths = ['/welcome', '/login', '/register'];
+
+/// The router provider. Watches auth state to trigger redirects
+/// when the user logs in or out.
 final routerProvider = Provider<GoRouter>((ref) {
+  final isAuthenticated = ref.watch(isAuthenticatedProvider);
+
   return GoRouter(
     // The key for the root navigator (above the shell/tabs).
     navigatorKey: _rootNavigatorKey,
 
-    // Where the app starts. Must match one of the branch routes.
-    initialLocation: '/catalog',
+    // Where the app starts.
+    initialLocation: '/welcome',
+
+    // ── Global Redirect (Auth Guard) ──────────────────────────
+    // This runs on EVERY navigation. It checks auth state and
+    // redirects accordingly:
+    // - Not authenticated + not on auth/welcome page → go to /welcome
+    // - Authenticated + on auth/welcome page → go to /catalog
+    redirect: (context, state) {
+      final isOnAuthPage = _authPaths.contains(state.matchedLocation);
+
+      if (!isAuthenticated && !isOnAuthPage) return '/welcome';
+      if (isAuthenticated && isOnAuthPage) return '/catalog';
+      return null; // no redirect needed
+    },
 
     routes: [
+      // ── Auth Routes (outside shell, no bottom nav) ──────────
+      GoRoute(
+        path: '/welcome',
+        name: RouteNames.welcome,
+        builder: (context, state) => const WelcomeScreen(),
+      ),
+      GoRoute(
+        path: '/login',
+        name: RouteNames.login,
+        builder: (context, state) => const LoginScreen(),
+      ),
+      GoRoute(
+        path: '/register',
+        name: RouteNames.register,
+        builder: (context, state) => const RegisterScreen(),
+      ),
+
       // ── Tab Navigation Shell ──────────────────────────────────
       // StatefulShellRoute creates a persistent shell (our ScaffoldWithNav)
       // that wraps tab content. The shell stays mounted while tabs switch.
