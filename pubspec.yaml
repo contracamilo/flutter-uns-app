@@ -53,6 +53,25 @@ dependencies:
   # Use FaIcon(FontAwesomeIcons.google) instead of Icon(Icons...).
   font_awesome_flutter: ^10.7.0
 
+  # AUTH — GOOGLE SIGN-IN:
+  # Official Google Sign-In plugin. Handles the OAuth 2.0 flow,
+  # token retrieval, and account selection UI natively on each platform.
+  # Requires GoogleService-Info.plist (iOS) and google-services.json (Android).
+  # See docs/AUTH_SETUP.md §1 for full setup instructions.
+  google_sign_in: ^6.2.2
+
+  # AUTH — GITHUB OAUTH (and any other OAuth provider):
+  # Opens a secure in-app browser (ASWebAuthenticationSession on iOS,
+  # Chrome Custom Tabs on Android) for the OAuth flow and captures
+  # the callback URL automatically. Used for GitHub's Authorization Code flow.
+  # See docs/AUTH_SETUP.md §2 for full setup instructions.
+  flutter_web_auth_2: ^4.0.0
+
+  # FIREBASE CORE: Requerido para inicializar Firebase en la app.
+  # Se inicializa en main.dart con Firebase.initializeApp().
+  # firebase_options.dart es generado por: flutterfire configure
+  firebase_core: ^4.4.0
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

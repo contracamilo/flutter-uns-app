@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:go_router/go_router.dart';
+import 'package:unisalle/core/config/auth_config.dart';
 import 'package:unisalle/core/router/route_names.dart';
 import 'package:unisalle/features/auth/providers/auth_provider.dart';
 import 'package:unisalle/features/auth/presentation/widgets/auth_text_field.dart';
@@ -126,7 +127,9 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                         FontAwesomeIcons.github,
                         size: 18,
                       ),
-                      onPressed: isLoading ? null : _handleGithubLogin,
+                      onPressed: isLoading || !GithubAuthConfig.isConfigured
+                          ? null
+                          : _handleGithubLogin,
                     ),
                     const SizedBox(height: 24),
 

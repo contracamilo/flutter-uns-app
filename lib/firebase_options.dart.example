@@ -1,0 +1,63 @@
+// ESTE ARCHIVO ES UNA PLANTILLA — no es funcional.
+//
+// lib/firebase_options.dart es generado automáticamente por FlutterFire CLI
+// y está en .gitignore por contener API keys del proyecto Firebase.
+//
+// Para generarlo en tu entorno local:
+//
+//   1. Instala las herramientas (solo la primera vez):
+//        npm install -g firebase-tools
+//        dart pub global activate flutterfire_cli
+//
+//   2. Autentícate:
+//        firebase login
+//
+//   3. Genera el archivo:
+//        flutterfire configure --project=<firebase-project-id>
+//
+// Ver docs/AUTH_SETUP.md para instrucciones completas.
+
+// ignore_for_file: type=lint
+import 'package:firebase_core/firebase_core.dart' show FirebaseOptions;
+import 'package:flutter/foundation.dart'
+    show defaultTargetPlatform, kIsWeb, TargetPlatform;
+
+class DefaultFirebaseOptions {
+  static FirebaseOptions get currentPlatform {
+    if (kIsWeb) return web;
+    switch (defaultTargetPlatform) {
+      case TargetPlatform.android:
+        return android;
+      case TargetPlatform.iOS:
+        return ios;
+      default:
+        throw UnsupportedError('Plataforma no configurada.');
+    }
+  }
+
+  static const FirebaseOptions web = FirebaseOptions(
+    apiKey: 'YOUR_WEB_API_KEY',
+    appId: 'YOUR_WEB_APP_ID',
+    messagingSenderId: 'YOUR_SENDER_ID',
+    projectId: 'YOUR_PROJECT_ID',
+    authDomain: 'YOUR_PROJECT_ID.firebaseapp.com',
+    storageBucket: 'YOUR_PROJECT_ID.firebasestorage.app',
+  );
+
+  static const FirebaseOptions android = FirebaseOptions(
+    apiKey: 'YOUR_ANDROID_API_KEY',
+    appId: 'YOUR_ANDROID_APP_ID',
+    messagingSenderId: 'YOUR_SENDER_ID',
+    projectId: 'YOUR_PROJECT_ID',
+    storageBucket: 'YOUR_PROJECT_ID.firebasestorage.app',
+  );
+
+  static const FirebaseOptions ios = FirebaseOptions(
+    apiKey: 'YOUR_IOS_API_KEY',
+    appId: 'YOUR_IOS_APP_ID',
+    messagingSenderId: 'YOUR_SENDER_ID',
+    projectId: 'YOUR_PROJECT_ID',
+    storageBucket: 'YOUR_PROJECT_ID.firebasestorage.app',
+    iosBundleId: 'com.unisalle.unisalle',
+  );
+}

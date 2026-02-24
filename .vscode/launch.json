@@ -1,0 +1,29 @@
+{
+  // Configuración de ejecución para VS Code.
+  // Incluye --dart-define-from-file para inyectar las variables de
+  // entorno (GITHUB_CLIENT_ID, etc.) sin exponerlas en el código fuente.
+  //
+  // Requisito: crea env/dev.json copiando env/dev.json.example
+  // y rellena los valores reales.
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "UniSalle (dev)",
+      "request": "launch",
+      "type": "dart",
+      "args": [
+        "--dart-define-from-file=env/dev.json"
+      ]
+    },
+    {
+      "name": "UniSalle (dev) — Chrome",
+      "request": "launch",
+      "type": "dart",
+      "args": [
+        "--dart-define-from-file=env/dev.json",
+        "-d",
+        "chrome"
+      ]
+    }
+  ]
+}

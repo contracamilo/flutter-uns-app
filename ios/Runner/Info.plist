@@ -24,6 +24,59 @@
 	<string>$(FLUTTER_BUILD_NUMBER)</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
+
+	<!--
+	  ══════════════════════════════════════════════════════════════════
+	  URL SCHEMES — OAuth callbacks
+	  ══════════════════════════════════════════════════════════════════
+
+	  iOS intercepta redirecciones hacia estos schemes y las entrega
+	  a la app. flutter_web_auth_2 usa ASWebAuthenticationSession, que
+	  captura el callback internamente, pero registrar el scheme aquí
+	  es buena práctica y necesario si se usan Universal Links.
+
+	  PARA GOOGLE SIGN-IN:
+	    1. Descarga GoogleService-Info.plist desde Firebase Console.
+	    2. Arrástralo a ios/Runner/ en Xcode (copia el archivo).
+	    3. Copia el valor de REVERSED_CLIENT_ID del .plist.
+	    4. Reemplaza "YOUR_REVERSED_CLIENT_ID" abajo con ese valor.
+	       Formato: com.googleusercontent.apps.XXXXXXXXXX-xxxx...
+
+	  PARA GITHUB OAUTH:
+	    El scheme "unisalle" ya está configurado. No requiere cambios
+	    a menos que cambies GithubAuthConfig.callbackScheme.
+	  ══════════════════════════════════════════════════════════════════
+	-->
+	<key>CFBundleURLTypes</key>
+	<array>
+		<!-- GitHub OAuth callback: unisalle://auth/callback -->
+		<dict>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>CFBundleURLName</key>
+			<string>com.unisalle.auth.github</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>unisalle</string>
+			</array>
+		</dict>
+		<!--
+		  Google Sign-In callback: com.googleusercontent.apps.XXXXX://
+		  TODO: Reemplaza "YOUR_REVERSED_CLIENT_ID" con el valor de
+		        REVERSED_CLIENT_ID en tu GoogleService-Info.plist
+		-->
+		<dict>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>CFBundleURLName</key>
+			<string>com.unisalle.auth.google</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>YOUR_REVERSED_CLIENT_ID</string>
+			</array>
+		</dict>
+	</array>
+
 	<key>UILaunchStoryboardName</key>
 	<string>LaunchScreen</string>
 	<key>UIMainStoryboardFile</key>
