@@ -84,11 +84,12 @@ class AuthNotifier extends AsyncNotifier<User?> {
   Future<void> logout() async {
     try {
       await ref.read(authRepositoryProvider).logout();
-    } finally {
-      // Limpia el estado local sin importar si el repositorio falla.
-      // Esto garantiza que el router redirige a /welcome siempre.
-      state = const AsyncData(null);
+    } catch (_) {
+      // Si el repositorio falla (ej. sin red), ignoramos el error.
+      // El estado local se limpia de todas formas para que el router
+      // siempre redirija a /welcome al pulsar el botón de cerrar sesión.
     }
+    state = const AsyncData(null);
   }
 }
 
