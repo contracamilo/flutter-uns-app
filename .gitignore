@@ -43,3 +43,40 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# ── Credenciales y archivos de configuración sensibles ───────────────────────
+#
+# Estos archivos contienen API keys, App IDs y configuración de Firebase/OAuth.
+# Ninguno debe exponerse en repositorios públicos.
+#
+# Para regenerarlos en un entorno nuevo:
+#   firebase login
+#   flutterfire configure --project=soa-arch-soft
+#   → genera: firebase_options.dart, google-services.json, GoogleService-Info.plist
+#             firebase.json
+#
+# Para las variables de entorno (GITHUB_CLIENT_ID, etc.):
+#   cp env/dev.json.example env/dev.json  → rellena con tus valores
+#
+# Ver docs/AUTH_SETUP.md para instrucciones completas.
+
+# Variables de entorno — dart-define-from-file
+env/dev.json
+env/prod.json
+env/staging.json
+
+# Generado por FlutterFire CLI
+# Contiene API keys para todas las plataformas (Android, iOS, Web)
+lib/firebase_options.dart
+
+# Configuración del proyecto Firebase
+# Contiene App IDs y project ID
+firebase.json
+
+# Archivos de configuración por plataforma generados por FlutterFire CLI
+# Rutas exactas para evitar ignorar accidentalmente otros archivos con el mismo nombre
+android/app/google-services.json
+ios/Runner/GoogleService-Info.plist
+
+# Configuración local de Claude Code (machine-specific, no para compartir)
+.claude/settings.local.json
