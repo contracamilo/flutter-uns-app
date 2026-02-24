@@ -1,27 +1,16 @@
 // ============================================================
 // FILE: remote_auth_repository.dart
-// PURPOSE: Implementación real de AuthRepository usando OAuth 2.0.
+// PURPOSE: Implementación real de AuthRepository usando Firebase Auth.
 //
 // ESTADO DE IMPLEMENTACIÓN:
-//   ✅ Google Sign-In   — SDK nativo, perfil obtenido del proveedor
-//   ✅ GitHub OAuth     — Authorization Code Flow, code capturado
-//   ⏳ Email/password   — Requiere backend propio
-//   ⏳ Token exchange   — Google idToken y GitHub code pendientes de
-//                         validación/intercambio en backend
-//
-// SEGURIDAD:
-//   El `client_secret` de GitHub NUNCA viaja al cliente.
-//   El intercambio code → access_token se hace desde el backend.
-//   Ver docs/AUTH_SETUP.md §3 "Integración con backend".
+//   ✅ Email / Password — Firebase Authentication
+//   ✅ Google Sign-In   — firebase_auth popup (web) / google_sign_in (móvil)
+//   ✅ GitHub OAuth     — firebase_auth popup (web) / signInWithProvider (móvil)
+//                         Firebase guarda el client_secret; el cliente nunca lo ve.
 // ============================================================
-
-import 'dart:convert';
-import 'dart:math';
 
 import 'package:firebase_auth/firebase_auth.dart' as fb;
 import 'package:flutter/foundation.dart' show kIsWeb;
-import 'package:flutter/services.dart' show PlatformException;
-import 'package:flutter_web_auth_2/flutter_web_auth_2.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:unisalle/core/config/auth_config.dart';
 import 'package:unisalle/features/auth/data/auth_repository.dart';
@@ -116,105 +105,42 @@ class RemoteAuthRepository implements AuthRepository {
     }
   }
 
-  // ── GitHub OAuth 2.0 ─────────────────────────────────────────────────────
+  // ── GitHub OAuth 2.0 via Firebase Auth ───────────────────────────────────
   //
-  // FLUJO — Authorization Code Flow (RFC 6749 §4.1):
-  //   1. [✅] Generar `state` aleatorio para protección CSRF
-  //   2. [✅] Abrir browser in-app en github.com/login/oauth/authorize
-  //   3. [✅] Capturar callback: unisalle://auth/callback?code=CODE&state=STATE
-  //   4. [✅] Validar state (CSRF)
-  //   5. [⏳] Backend intercambia code → access_token con GitHub
-  //   6. [⏳] Backend llama GET /user en GitHub API y crea sesión
+  // Firebase guarda el client_secret de GitHub en su servidor.
+  // El cliente solo solicita el proveedor; Firebase maneja el intercambio
+  // code → access_token internamente.
   //
-  // POR QUÉ EL INTERCAMBIO VA EN EL BACKEND:
-  //   GitHub exige `client_secret` para el intercambio. Si este secreto
-  //   viviera en el APK/IPA, cualquier persona con acceso al binario
-  //   podría extraerlo con herramientas de ingeniería inversa.
-  //
-  // PREREQUISITOS — ver docs/AUTH_SETUP.md §2:
-  //   • GitHub OAuth App en github.com/settings/developers
-  //   • Authorization callback URL: unisalle://auth/callback
-  //   • GithubAuthConfig.clientId actualizado con el Client ID real
-
-  String? _pendingGithubState;
+  // PREREQUISITOS (una vez):
+  //   1. GitHub OAuth App → Authorization callback URL:
+  //      https://soa-arch-soft.firebaseapp.com/__/auth/handler
+  //   2. Firebase Console → Authentication → GitHub → habilitar con
+  //      Client ID y Client Secret de la GitHub OAuth App.
 
   @override
   Future<User> loginWithGithub() async {
-    // Paso 1 — Generar state CSRF de 128 bits (URL-safe Base64)
-    final state = _generateSecureState();
-    _pendingGithubState = state;
-
-    // Paso 2 — Construir URL de autorización
-    final authUrl = Uri.https('github.com', '/login/oauth/authorize', {
-      'client_id': GithubAuthConfig.clientId,
-      'scope': GithubAuthConfig.scope,
-      'state': state,
-      'redirect_uri': GithubAuthConfig.redirectUri,
-    });
-
     try {
-      // Paso 3 — Abrir browser in-app y esperar callback.
-      // flutter_web_auth_2 usa:
-      //   iOS:     ASWebAuthenticationSession (sesión aislada, sin cookies de Safari)
-      //   Android: Chrome Custom Tabs
-      final callbackUrl = await FlutterWebAuth2.authenticate(
-        url: authUrl.toString(),
-        callbackUrlScheme: GithubAuthConfig.callbackScheme,
-      );
+      final provider = fb.GithubAuthProvider()
+        ..addScope('read:user')
+        ..addScope('user:email');
 
-      // Paso 4 — Validar state (protección CSRF)
-      final callbackUri = Uri.parse(callbackUrl);
-      final returnedState = callbackUri.queryParameters['state'];
-      final code = callbackUri.queryParameters['code'];
-
-      if (returnedState != _pendingGithubState) {
-        throw Exception(
-          'Estado de seguridad inválido — posible ataque CSRF.',
-        );
-      }
-      _pendingGithubState = null;
-
-      if (code == null) {
-        throw Exception('GitHub no devolvió el código de autorización.');
+      final fb.UserCredential credential;
+      if (kIsWeb) {
+        credential =
+            await fb.FirebaseAuth.instance.signInWithPopup(provider);
+      } else {
+        credential =
+            await fb.FirebaseAuth.instance.signInWithProvider(provider);
       }
 
-      // Paso 5 (TODO) — Enviar `code` al backend para intercambiarlo.
-      // ⚠️ NUNCA hagas este intercambio desde el cliente.
-      //
-      //   final response = await http.post(
-      //     Uri.parse('${ApiConfig.baseUrl}/auth/github/callback'),
-      //     headers: {'Content-Type': 'application/json'},
-      //     body: jsonEncode({'code': code}),
-      //   );
-      //   if (response.statusCode != 200) {
-      //     throw Exception('Error al autenticar con GitHub');
-      //   }
-      //   final data = jsonDecode(response.body) as Map<String, dynamic>;
-      //   await _saveSessionToken(data['session_token'] as String);
-
-      // Paso 6 (TODO) — El backend usa el access_token para GET /user:
-      //
-      //   GET https://api.github.com/user
-      //   Authorization: Bearer <access_token>
-      //   Accept: application/vnd.github+json
-      //
-      //   Los emails privados están en:
-      //   GET https://api.github.com/user/emails
-      //
-      //   return User.fromJson(data['user'] as Map<String, dynamic>);
-
-      // Provisional: usuario temporal con el code validado.
-      // El nombre/email real vendrá del backend en el paso 6.
+      final fbUser = credential.user!;
       return User(
-        id: 'github-${DateTime.now().millisecondsSinceEpoch}',
-        name: 'GitHub User',
-        email: 'pending@github.com',
+        id: fbUser.uid,
+        name: fbUser.displayName ?? 'GitHub User',
+        email: fbUser.email ?? '',
       );
-    } on PlatformException catch (e) {
-      if (e.code == 'CANCELED') {
-        throw Exception('Login con GitHub cancelado.');
-      }
-      rethrow;
+    } on fb.FirebaseAuthException catch (e) {
+      throw Exception(_mapFirebaseError(e));
     }
   }
 
@@ -223,7 +149,12 @@ class RemoteAuthRepository implements AuthRepository {
   @override
   Future<void> logout() async {
     await fb.FirebaseAuth.instance.signOut();
-    await _googleSignIn.signOut();
+    // signOut del SDK de Google es opcional (limpia el estado local para que
+    // el selector de cuentas aparezca en el próximo login). Se ignoran errores
+    // porque puede fallar si el usuario no inició sesión con Google.
+    try {
+      await _googleSignIn.signOut();
+    } catch (_) {}
   }
 
   // ── Helpers ───────────────────────────────────────────────────────────────
@@ -249,22 +180,15 @@ class RemoteAuthRepository implements AuthRepository {
       case 'network-request-failed':
         return 'Sin conexión. Verifica tu red.';
       case 'popup-closed-by-user':
-        return 'Login con Google cancelado.';
+        return 'Login cancelado.';
+      case 'account-exists-with-different-credential':
+        return 'Ya existe una cuenta con este email usando otro método de login.';
+      case 'popup-blocked':
+        return 'El popup fue bloqueado. Permite popups para este sitio.';
       case 'operation-not-allowed':
         return 'Este método de login no está habilitado.';
       default:
         return 'Error de autenticación: ${e.message ?? e.code}';
     }
-  }
-
-  /// Genera un state aleatorio criptográficamente seguro (128 bits).
-  /// Codificado en Base64url para ser URL-safe sin padding.
-  ///
-  /// Propósito: prevenir ataques CSRF en el flujo OAuth.
-  /// Ver: https://datatracker.ietf.org/doc/html/rfc6749#section-10.12
-  String _generateSecureState() {
-    final random = Random.secure();
-    final bytes = List<int>.generate(16, (_) => random.nextInt(256));
-    return base64Url.encode(bytes);
   }
 }
