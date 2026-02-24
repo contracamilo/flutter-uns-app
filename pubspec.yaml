@@ -72,6 +72,10 @@ dependencies:
   # firebase_options.dart es generado por: flutterfire configure
   firebase_core: ^4.4.0
 
+  # FIREBASE AUTH: Autenticación con email/contraseña (y otros proveedores).
+  # Requiere habilitar Email/Password en Firebase Console → Authentication.
+  firebase_auth: ^6.1.4
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

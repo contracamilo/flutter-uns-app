@@ -18,6 +18,8 @@
 import 'dart:convert';
 import 'dart:math';
 
+import 'package:firebase_auth/firebase_auth.dart' as fb;
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/services.dart' show PlatformException;
 import 'package:flutter_web_auth_2/flutter_web_auth_2.dart';
 import 'package:google_sign_in/google_sign_in.dart';
@@ -35,27 +37,18 @@ class RemoteAuthRepository implements AuthRepository {
 
   @override
   Future<User> loginWithEmail(String email, String password) async {
-    // TODO: Reemplazar con llamada HTTP al backend.
-    //
-    // Ejemplo (requiere añadir `http` a pubspec.yaml):
-    //
-    //   final response = await http.post(
-    //     Uri.parse('${ApiConfig.baseUrl}/auth/login'),
-    //     headers: {'Content-Type': 'application/json'},
-    //     body: jsonEncode({'email': email, 'password': password}),
-    //   );
-    //   if (response.statusCode != 200) {
-    //     final body = jsonDecode(response.body) as Map<String, dynamic>;
-    //     throw Exception(body['message'] ?? 'Error de autenticación');
-    //   }
-    //   final data = jsonDecode(response.body) as Map<String, dynamic>;
-    //   await _saveSessionToken(data['token'] as String);
-    //   return User.fromJson(data['user'] as Map<String, dynamic>);
-    //
-    throw UnimplementedError(
-      'loginWithEmail requiere integración con el backend. '
-      'Activa MockAuthRepository para continuar el desarrollo.',
-    );
+    try {
+      final credential = await fb.FirebaseAuth.instance
+          .signInWithEmailAndPassword(email: email, password: password);
+      final fbUser = credential.user!;
+      return User(
+        id: fbUser.uid,
+        name: fbUser.displayName ?? email.split('@').first,
+        email: fbUser.email!,
+      );
+    } on fb.FirebaseAuthException catch (e) {
+      throw Exception(_mapFirebaseError(e));
+    }
   }
 
   @override
@@ -64,29 +57,14 @@ class RemoteAuthRepository implements AuthRepository {
     String email,
     String password,
   ) async {
-    // TODO: Reemplazar con llamada HTTP al backend.
-    //
-    //   final response = await http.post(
-    //     Uri.parse('${ApiConfig.baseUrl}/auth/register'),
-    //     headers: {'Content-Type': 'application/json'},
-    //     body: jsonEncode({
-    //       'name': name,
-    //       'email': email,
-    //       'password': password,
-    //     }),
-    //   );
-    //   if (response.statusCode != 201) {
-    //     final body = jsonDecode(response.body) as Map<String, dynamic>;
-    //     throw Exception(body['message'] ?? 'Error al registrar');
-    //   }
-    //   final data = jsonDecode(response.body) as Map<String, dynamic>;
-    //   await _saveSessionToken(data['token'] as String);
-    //   return User.fromJson(data['user'] as Map<String, dynamic>);
-    //
-    throw UnimplementedError(
-      'registerWithEmail requiere integración con el backend. '
-      'Activa MockAuthRepository para continuar el desarrollo.',
-    );
+    try {
+      final credential = await fb.FirebaseAuth.instance
+          .createUserWithEmailAndPassword(email: email, password: password);
+      await credential.user!.updateDisplayName(name);
+      return User(id: credential.user!.uid, name: name, email: email);
+    } on fb.FirebaseAuthException catch (e) {
+      throw Exception(_mapFirebaseError(e));
+    }
   }
 
   // ── Google Sign-In ────────────────────────────────────────────────────────
@@ -104,41 +82,38 @@ class RemoteAuthRepository implements AuthRepository {
 
   @override
   Future<User> loginWithGoogle() async {
-    // Paso 1 — Abrir el selector de cuentas de Google.
-    // El SDK maneja el flujo OAuth internamente.
-    final account = await _googleSignIn.signIn();
+    try {
+      fb.UserCredential credential;
 
-    if (account == null) throw Exception('Login con Google cancelado.');
+      if (kIsWeb) {
+        // Web: Firebase abre el popup de Google directamente.
+        // No necesita google_sign_in ni CLIENT_ID en el cliente.
+        credential = await fb.FirebaseAuth.instance
+            .signInWithPopup(fb.GoogleAuthProvider());
+      } else {
+        // iOS / Android: google_sign_in obtiene los tokens OAuth,
+        // que luego se intercambian por una sesión Firebase.
+        final account = await _googleSignIn.signIn();
+        if (account == null) throw Exception('Login con Google cancelado.');
 
-    // Paso 2 — El perfil ya está disponible: account.email, .displayName, .id
-    // Los tokens se obtienen así (necesarios para el paso 3):
-    //
-    //   final auth = await account.authentication;
-    //   final idToken = auth.idToken;       // JWT firmado por Google
-    //   final accessToken = auth.accessToken; // Para llamar APIs de Google
+        final auth = await account.authentication;
+        final fbCredential = fb.GoogleAuthProvider.credential(
+          accessToken: auth.accessToken,
+          idToken: auth.idToken,
+        );
+        credential = await fb.FirebaseAuth.instance
+            .signInWithCredential(fbCredential);
+      }
 
-    // Paso 3 (TODO) — Enviar idToken al backend para:
-    //   a) Verificar la firma JWT contra las claves públicas de Google
-    //   b) Crear o recuperar el usuario en tu base de datos
-    //   c) Emitir un session token (JWT propio) para futuras requests
-    //
-    //   final auth = await account.authentication;
-    //   final response = await http.post(
-    //     Uri.parse('${ApiConfig.baseUrl}/auth/google'),
-    //     headers: {'Content-Type': 'application/json'},
-    //     body: jsonEncode({'id_token': auth.idToken}),
-    //   );
-    //   final data = jsonDecode(response.body) as Map<String, dynamic>;
-    //   await _saveSessionToken(data['session_token'] as String);
-    //   return User.fromJson(data['user'] as Map<String, dynamic>);
-
-    // Provisional: construir User con el perfil de Google.
-    // ⚠️ No usar en producción sin verificación del backend.
-    return User(
-      id: account.id,
-      name: account.displayName ?? 'Usuario de Google',
-      email: account.email,
-    );
+      final fbUser = credential.user!;
+      return User(
+        id: fbUser.uid,
+        name: fbUser.displayName ?? 'Usuario de Google',
+        email: fbUser.email!,
+      );
+    } on fb.FirebaseAuthException catch (e) {
+      throw Exception(_mapFirebaseError(e));
+    }
   }
 
   // ── GitHub OAuth 2.0 ─────────────────────────────────────────────────────
@@ -247,21 +222,40 @@ class RemoteAuthRepository implements AuthRepository {
 
   @override
   Future<void> logout() async {
-    // Cerrar sesión de Google (limpia la cuenta seleccionada en el SDK)
+    await fb.FirebaseAuth.instance.signOut();
     await _googleSignIn.signOut();
-
-    // GitHub: no hay SDK que limpiar; la sesión es manejada por el backend.
-
-    // TODO — Invalidar el session token en el backend:
-    //
-    //   await http.post(
-    //     Uri.parse('${ApiConfig.baseUrl}/auth/logout'),
-    //     headers: {'Authorization': 'Bearer $_sessionToken'},
-    //   );
-    //   await _clearSessionToken();
   }
 
   // ── Helpers ───────────────────────────────────────────────────────────────
+
+  String _mapFirebaseError(fb.FirebaseAuthException e) {
+    switch (e.code) {
+      case 'user-not-found':
+        return 'No existe una cuenta con este email.';
+      case 'wrong-password':
+        return 'Contraseña incorrecta. Intenta de nuevo.';
+      case 'invalid-credential':
+        return 'Email o contraseña incorrectos.';
+      case 'user-disabled':
+        return 'Esta cuenta ha sido deshabilitada.';
+      case 'too-many-requests':
+        return 'Demasiados intentos. Espera unos minutos.';
+      case 'email-already-in-use':
+        return 'Ya existe una cuenta con este email.';
+      case 'weak-password':
+        return 'La contraseña es muy débil (mínimo 6 caracteres).';
+      case 'invalid-email':
+        return 'El formato del email no es válido.';
+      case 'network-request-failed':
+        return 'Sin conexión. Verifica tu red.';
+      case 'popup-closed-by-user':
+        return 'Login con Google cancelado.';
+      case 'operation-not-allowed':
+        return 'Este método de login no está habilitado.';
+      default:
+        return 'Error de autenticación: ${e.message ?? e.code}';
+    }
+  }
 
   /// Genera un state aleatorio criptográficamente seguro (128 bits).
   /// Codificado en Base64url para ser URL-safe sin padding.

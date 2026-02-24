@@ -66,10 +66,31 @@ final _cartNavigatorKey = GlobalKey<NavigatorState>();
 /// Auth pages that don't require authentication.
 const _authPaths = ['/welcome', '/login', '/register'];
 
-/// The router provider. Watches auth state to trigger redirects
-/// when the user logs in or out.
+// ── Auth change notifier ───────────────────────────────────────────────────
+//
+// GoRouter's `refreshListenable` accepts a Listenable. When it fires,
+// GoRouter re-evaluates its `redirect` callback without recreating the router.
+//
+// Pattern: Riverpod `ref.listen` → ChangeNotifier.notifyListeners()
+//                                → GoRouter re-runs redirect
+//
+// WHY this instead of ref.watch inside the provider:
+//   Watching isAuthenticatedProvider causes the Provider to rebuild and
+//   return a *new* GoRouter every time auth changes. But the navigator
+//   key (_rootNavigatorKey) is static, so Flutter reuses the old navigator
+//   state — the redirect in the new router never fires.
+//   refreshListenable keeps ONE router alive and pokes it reactively.
+class _AuthNotifier extends ChangeNotifier {
+  _AuthNotifier(Ref ref) {
+    ref.listen<bool>(isAuthenticatedProvider, (_, __) => notifyListeners());
+  }
+}
+
+/// The router provider. Creates the GoRouter once and uses refreshListenable
+/// to trigger redirect re-evaluation when auth state changes.
 final routerProvider = Provider<GoRouter>((ref) {
-  final isAuthenticated = ref.watch(isAuthenticatedProvider);
+  final authNotifier = _AuthNotifier(ref);
+  ref.onDispose(authNotifier.dispose);
 
   return GoRouter(
     // The key for the root navigator (above the shell/tabs).
@@ -78,12 +99,14 @@ final routerProvider = Provider<GoRouter>((ref) {
     // Where the app starts.
     initialLocation: '/welcome',
 
+    // Pokes GoRouter whenever auth state changes so redirect re-runs.
+    refreshListenable: authNotifier,
+
     // ── Global Redirect (Auth Guard) ──────────────────────────
-    // This runs on EVERY navigation. It checks auth state and
-    // redirects accordingly:
-    // - Not authenticated + not on auth/welcome page → go to /welcome
-    // - Authenticated + on auth/welcome page → go to /catalog
+    // This runs on every navigation AND every refreshListenable tick.
+    // Use ref.read (not watch) — GoRouter calls this, not Riverpod.
     redirect: (context, state) {
+      final isAuthenticated = ref.read(isAuthenticatedProvider);
       final isOnAuthPage = _authPaths.contains(state.matchedLocation);
 
       if (!isAuthenticated && !isOnAuthPage) return '/welcome';

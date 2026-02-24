@@ -17,8 +17,8 @@
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:unisalle/features/auth/data/auth_repository.dart';
-import 'package:unisalle/features/auth/data/mock_auth_repository.dart';
-// import 'package:unisalle/features/auth/data/remote_auth_repository.dart'; // Descomenta al activar RemoteAuthRepository
+// import 'package:unisalle/features/auth/data/mock_auth_repository.dart'; // Activa para desarrollo sin red
+import 'package:unisalle/features/auth/data/remote_auth_repository.dart';
 import 'package:unisalle/models/user.dart';
 
 // ── Repository provider ───────────────────────────────────────────────────
@@ -34,7 +34,7 @@ import 'package:unisalle/models/user.dart';
 //    Usa MockAuthRepository para desarrollo de UI con email/password.
 
 final authRepositoryProvider = Provider<AuthRepository>((ref) {
-  return MockAuthRepository(); // 👈 Cambia a RemoteAuthRepository() cuando el backend esté listo
+  return RemoteAuthRepository();
 });
 
 // ── Auth notifier ─────────────────────────────────────────────────────────
