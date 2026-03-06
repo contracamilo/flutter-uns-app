@@ -13,7 +13,8 @@ import 'package:firebase_auth/firebase_auth.dart' as fb;
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:unisalle/core/config/auth_config.dart';
-import 'package:unisalle/features/auth/data/auth_repository.dart';
+import 'package:unisalle/features/auth/data/auth_repository.dart'
+    show AuthCancelledException, AuthRepository;
 import 'package:unisalle/models/user.dart';
 
 class RemoteAuthRepository implements AuthRepository {
@@ -83,7 +84,7 @@ class RemoteAuthRepository implements AuthRepository {
         // iOS / Android: google_sign_in obtiene los tokens OAuth,
         // que luego se intercambian por una sesión Firebase.
         final account = await _googleSignIn.signIn();
-        if (account == null) throw Exception('Login con Google cancelado.');
+        if (account == null) throw const AuthCancelledException();
 
         final auth = await account.authentication;
         final fbCredential = fb.GoogleAuthProvider.credential(
@@ -140,6 +141,9 @@ class RemoteAuthRepository implements AuthRepository {
         email: fbUser.email ?? '',
       );
     } on fb.FirebaseAuthException catch (e) {
+      if (e.code == 'web-context-cancelled' || e.code == 'cancelled') {
+        throw const AuthCancelledException();
+      }
       throw Exception(_mapFirebaseError(e));
     }
   }

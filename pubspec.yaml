@@ -76,6 +76,11 @@ dependencies:
   # Requiere habilitar Email/Password en Firebase Console → Authentication.
   firebase_auth: ^6.1.4
 
+  # RXDART: Extensiones reactivas para Dart Streams.
+  # Provee BehaviorSubject y Rx.combineLatest para el patrón BLoC puro.
+  # Usado en ProfileFormBloc para validaciones reactivas en tiempo real.
+  rxdart: ^0.28.0
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

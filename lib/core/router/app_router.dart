@@ -54,6 +54,7 @@ import 'package:unisalle/features/catalog/presentation/screens/catalog_screen.da
 import 'package:unisalle/features/cart/presentation/screens/cart_screen.dart';
 import 'package:unisalle/features/favorites/presentation/screens/favorites_screen.dart';
 import 'package:unisalle/features/product_detail/presentation/screens/product_detail_screen.dart';
+import 'package:unisalle/features/profile/presentation/screens/profile_screen.dart';
 import 'package:unisalle/shared/widgets/scaffold_with_nav.dart';
 
 // Navigator keys for each tab branch. These let GoRouter manage
@@ -130,6 +131,16 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/register',
         name: RouteNames.register,
         builder: (context, state) => const RegisterScreen(),
+      ),
+
+      // ── Profile Route (outside shell, no bottom nav) ─────────
+      // La pantalla de perfil se muestra como una pantalla completa
+      // sobre el shell de navegación, con su propio AppBar y botón
+      // de retroceso. Está protegida por el auth guard global.
+      GoRoute(
+        path: '/profile',
+        name: RouteNames.profile,
+        builder: (context, state) => const ProfileScreen(),
       ),
 
       // ── Tab Navigation Shell ──────────────────────────────────

@@ -72,7 +72,7 @@
 			<string>com.unisalle.auth.google</string>
 			<key>CFBundleURLSchemes</key>
 			<array>
-				<string>YOUR_REVERSED_CLIENT_ID</string>
+				<string>com.googleusercontent.apps.643944194795-fauc2g69gaccqpgln47bqomc0dcd7q33</string>
 			</array>
 		</dict>
 	</array>
