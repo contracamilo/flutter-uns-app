@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:go_router/go_router.dart';
 import 'package:unisalle/core/router/route_names.dart';
+import 'package:unisalle/features/auth/data/auth_repository.dart'
+    show AuthCancelledException;
 import 'package:unisalle/features/auth/providers/auth_provider.dart';
 import 'package:unisalle/features/auth/presentation/widgets/auth_text_field.dart';
 import 'package:unisalle/features/auth/presentation/widgets/social_login_button.dart';
@@ -49,7 +51,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     final theme = Theme.of(context);
 
     ref.listen(authProvider, (previous, next) {
-      if (next.hasError) {
+      if (next.hasError && next.error is! AuthCancelledException) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(next.error.toString()),

@@ -22,6 +22,8 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+import 'package:unisalle/core/router/route_names.dart';
 import 'package:unisalle/core/theme/theme_provider.dart';
 import 'package:unisalle/features/auth/providers/auth_provider.dart';
 import 'package:unisalle/features/catalog/providers/search_provider.dart';
@@ -57,6 +59,11 @@ class CatalogAppBar extends ConsumerWidget implements PreferredSizeWidget {
 
       // ── Theme Toggle ──────────────────────────────────────────
       actions: [
+        IconButton(
+          icon: const Icon(Icons.person_outline),
+          tooltip: 'Mi perfil',
+          onPressed: () => context.pushNamed(RouteNames.profile),
+        ),
         IconButton(
           icon: Icon(
             switch (themeMode) {

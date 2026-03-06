@@ -20,6 +20,12 @@
 
 import 'package:unisalle/models/user.dart';
 
+/// Lanzada cuando el usuario cancela voluntariamente un flujo OAuth.
+/// No debe mostrarse como error en la UI.
+class AuthCancelledException implements Exception {
+  const AuthCancelledException();
+}
+
 abstract class AuthRepository {
   /// Autentica con email y contraseña.
   Future<User> loginWithEmail(String email, String password);

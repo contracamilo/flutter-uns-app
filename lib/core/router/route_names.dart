@@ -26,4 +26,5 @@ abstract class RouteNames {
   static const String productDetail = 'product-detail';
   static const String cart = 'cart';
   static const String favorites = 'favorites';
+  static const String profile = 'profile';
 }
