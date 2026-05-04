@@ -13,6 +13,8 @@
 //   - Google y GitHub devuelven usuarios predefinidos
 // ============================================================
 
+import 'dart:io';
+
 import 'package:unisalle/features/auth/data/auth_repository.dart';
 import 'package:unisalle/models/user.dart';
 
@@ -82,5 +84,19 @@ class MockAuthRepository implements AuthRepository {
   @override
   Future<void> logout() async {
     // Nada que limpiar en el mock
+  }
+
+  @override
+  Future<User?> restoreSession() async => null;
+
+  @override
+  Future<User> updateProfileImage(String userId, File image) async {
+    await Future.delayed(const Duration(milliseconds: 600));
+    return User(
+      id: userId,
+      name: 'Mock User',
+      email: 'mock@example.com',
+      photoUrl: 'https://placehold.co/200x200/png',
+    );
   }
 }

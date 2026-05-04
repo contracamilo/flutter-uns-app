@@ -1,43 +1,53 @@
 // ============================================================
 // FILE: remote_auth_repository.dart
-// PURPOSE: Implementación real de AuthRepository usando Firebase Auth.
+// PURPOSE: Implementación real de AuthRepository.
 //
-// ESTADO DE IMPLEMENTACIÓN:
-//   ✅ Email / Password — Firebase Authentication
-//   ✅ Google Sign-In   — firebase_auth popup (web) / google_sign_in (móvil)
-//   ✅ GitHub OAuth     — firebase_auth popup (web) / signInWithProvider (móvil)
-//                         Firebase guarda el client_secret; el cliente nunca lo ve.
+// FUENTES DE AUTH:
+//   ✅ Email / Password — backend Node.js + JWT (BackendAuthService)
+//   ✅ Google Sign-In   — Firebase Auth (popup web / google_sign_in móvil)
+//   ✅ GitHub OAuth     — Firebase Auth (popup web / signInWithProvider móvil)
+//
+// El JWT del backend se persiste en TokenStorage (secure storage) y
+// se inyecta automáticamente como Bearer en cada request via interceptor.
+// Los flujos OAuth no usan TokenStorage: su sesión vive en Firebase.
 // ============================================================
 
+import 'dart:io';
+
+import 'package:dio/dio.dart';
 import 'package:firebase_auth/firebase_auth.dart' as fb;
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:google_sign_in/google_sign_in.dart';
+import 'package:unisalle/core/auth/token_storage.dart';
 import 'package:unisalle/core/config/auth_config.dart';
+import 'package:unisalle/core/network/api_exceptions.dart';
 import 'package:unisalle/features/auth/data/auth_repository.dart'
     show AuthCancelledException, AuthRepository;
+import 'package:unisalle/features/auth/data/backend_auth_service.dart';
 import 'package:unisalle/models/user.dart';
 
 class RemoteAuthRepository implements AuthRepository {
-  RemoteAuthRepository()
-      : _googleSignIn = GoogleSignIn(scopes: GoogleAuthConfig.scopes);
+  RemoteAuthRepository({
+    required BackendAuthService backendAuth,
+    required TokenStorage tokenStorage,
+  })  : _backendAuth = backendAuth,
+        _tokenStorage = tokenStorage,
+        _googleSignIn = GoogleSignIn(scopes: GoogleAuthConfig.scopes);
 
+  final BackendAuthService _backendAuth;
+  final TokenStorage _tokenStorage;
   final GoogleSignIn _googleSignIn;
 
-  // ── Email / Password ──────────────────────────────────────────────────────
+  // ── Email / Password (backend Node.js) ──────────────────────────────────
 
   @override
   Future<User> loginWithEmail(String email, String password) async {
     try {
-      final credential = await fb.FirebaseAuth.instance
-          .signInWithEmailAndPassword(email: email, password: password);
-      final fbUser = credential.user!;
-      return User(
-        id: fbUser.uid,
-        name: fbUser.displayName ?? email.split('@').first,
-        email: fbUser.email!,
-      );
-    } on fb.FirebaseAuthException catch (e) {
-      throw Exception(_mapFirebaseError(e));
+      final session = await _backendAuth.login(email, password);
+      await _tokenStorage.save(session.token);
+      return session.user;
+    } on DioException catch (e) {
+      throw Exception(_mapBackendError(e));
     }
   }
 
@@ -48,27 +58,38 @@ class RemoteAuthRepository implements AuthRepository {
     String password,
   ) async {
     try {
-      final credential = await fb.FirebaseAuth.instance
-          .createUserWithEmailAndPassword(email: email, password: password);
-      await credential.user!.updateDisplayName(name);
-      return User(id: credential.user!.uid, name: name, email: email);
-    } on fb.FirebaseAuthException catch (e) {
-      throw Exception(_mapFirebaseError(e));
+      final session = await _backendAuth.register(name, email, password);
+      await _tokenStorage.save(session.token);
+      return session.user;
+    } on DioException catch (e) {
+      throw Exception(_mapBackendError(e));
     }
   }
 
-  // ── Google Sign-In ────────────────────────────────────────────────────────
-  //
-  // FLUJO:
-  //   1. [✅] SDK abre el selector de cuentas de Google nativo
-  //   2. [✅] Obtener GoogleSignInAccount con perfil y tokens
-  //   3. [⏳] Enviar idToken al backend para verificación y sesión
-  //
-  // PREREQUISITOS — ver docs/AUTH_SETUP.md §1:
-  //   • Proyecto en Google Cloud Console con OAuth 2.0
-  //   • GoogleService-Info.plist en ios/Runner/          (iOS)
-  //   • google-services.json en android/app/             (Android)
-  //   • SHA-1 del keystore de debug/release registrado   (Android)
+  @override
+  Future<User?> restoreSession() async {
+    final token = await _tokenStorage.read();
+    if (token == null || token.isEmpty) return null;
+    try {
+      return await _backendAuth.me();
+    } on DioException {
+      // El interceptor ya limpió el token si fue 401. Cualquier otro
+      // error de red deja la sesión en limbo: devolvemos null para que
+      // el usuario haga login manualmente.
+      return null;
+    }
+  }
+
+  @override
+  Future<User> updateProfileImage(String userId, File image) async {
+    try {
+      return await _backendAuth.updateProfileImage(userId, image);
+    } on DioException catch (e) {
+      throw Exception(_mapBackendError(e));
+    }
+  }
+
+  // ── Google Sign-In (Firebase) ───────────────────────────────────────────
 
   @override
   Future<User> loginWithGoogle() async {
@@ -76,13 +97,9 @@ class RemoteAuthRepository implements AuthRepository {
       fb.UserCredential credential;
 
       if (kIsWeb) {
-        // Web: Firebase abre el popup de Google directamente.
-        // No necesita google_sign_in ni CLIENT_ID en el cliente.
         credential = await fb.FirebaseAuth.instance
             .signInWithPopup(fb.GoogleAuthProvider());
       } else {
-        // iOS / Android: google_sign_in obtiene los tokens OAuth,
-        // que luego se intercambian por una sesión Firebase.
         final account = await _googleSignIn.signIn();
         if (account == null) throw const AuthCancelledException();
 
@@ -99,24 +116,15 @@ class RemoteAuthRepository implements AuthRepository {
       return User(
         id: fbUser.uid,
         name: fbUser.displayName ?? 'Usuario de Google',
-        email: fbUser.email!,
+        email: fbUser.email ?? '',
+        photoUrl: fbUser.photoURL,
       );
     } on fb.FirebaseAuthException catch (e) {
       throw Exception(_mapFirebaseError(e));
     }
   }
 
-  // ── GitHub OAuth 2.0 via Firebase Auth ───────────────────────────────────
-  //
-  // Firebase guarda el client_secret de GitHub en su servidor.
-  // El cliente solo solicita el proveedor; Firebase maneja el intercambio
-  // code → access_token internamente.
-  //
-  // PREREQUISITOS (una vez):
-  //   1. GitHub OAuth App → Authorization callback URL:
-  //      https://soa-arch-soft.firebaseapp.com/__/auth/handler
-  //   2. Firebase Console → Authentication → GitHub → habilitar con
-  //      Client ID y Client Secret de la GitHub OAuth App.
+  // ── GitHub OAuth (Firebase) ─────────────────────────────────────────────
 
   @override
   Future<User> loginWithGithub() async {
@@ -139,6 +147,7 @@ class RemoteAuthRepository implements AuthRepository {
         id: fbUser.uid,
         name: fbUser.displayName ?? 'GitHub User',
         email: fbUser.email ?? '',
+        photoUrl: fbUser.photoURL,
       );
     } on fb.FirebaseAuthException catch (e) {
       if (e.code == 'web-context-cancelled' || e.code == 'cancelled') {
@@ -148,20 +157,39 @@ class RemoteAuthRepository implements AuthRepository {
     }
   }
 
-  // ── Logout ────────────────────────────────────────────────────────────────
+  // ── Logout ──────────────────────────────────────────────────────────────
 
   @override
   Future<void> logout() async {
-    await fb.FirebaseAuth.instance.signOut();
-    // signOut del SDK de Google es opcional (limpia el estado local para que
-    // el selector de cuentas aparezca en el próximo login). Se ignoran errores
-    // porque puede fallar si el usuario no inició sesión con Google.
+    // Limpia el JWT del backend (secure storage). Los flujos OAuth viven
+    // en Firebase; cerrar sesión también allí.
+    await _tokenStorage.clear();
+    try {
+      await fb.FirebaseAuth.instance.signOut();
+    } catch (_) {}
     try {
       await _googleSignIn.signOut();
     } catch (_) {}
   }
 
-  // ── Helpers ───────────────────────────────────────────────────────────────
+  // ── Mapeo de errores ────────────────────────────────────────────────────
+
+  String _mapBackendError(DioException e) {
+    final err = e.error;
+    if (err is ValidationException) {
+      if (err.errors.isNotEmpty) {
+        return err.errors.map((v) => v.message).join('\n');
+      }
+      return err.message;
+    }
+    if (err is UnauthorizedException) {
+      return 'Credenciales incorrectas.';
+    }
+    if (err is ApiException) {
+      return err.message;
+    }
+    return 'No se pudo contactar al servidor. Verifica tu conexión.';
+  }
 
   String _mapFirebaseError(fb.FirebaseAuthException e) {
     switch (e.code) {

@@ -1,40 +1,39 @@
 // ============================================================
 // FILE: auth_provider.dart
-// PURPOSE: Estado global de autenticación y punto de inyección
-//          del repositorio de auth.
+// PURPOSE: Estado global de autenticación + inyección del repositorio.
 //
 // ARQUITECTURA:
-//   AuthNotifier ya no contiene lógica de negocio — delega
-//   todas las operaciones a AuthRepository. Esto permite:
-//   - Cambiar de mock a real cambiando UNA línea (authRepositoryProvider)
-//   - Testear AuthNotifier inyectando un repo fake
+//   AuthNotifier delega toda la lógica a AuthRepository.
+//   El repositorio activo es RemoteAuthRepository, que combina:
+//     • Backend Node.js (JWT) para email/password
+//     • Firebase Auth para Google y GitHub OAuth
 //
-// PARA CAMBIAR LA IMPLEMENTACIÓN:
-//   En authRepositoryProvider, cambia:
-//     MockAuthRepository()    → desarrollo/testing sin red
-//     RemoteAuthRepository()  → OAuth real (Google + GitHub)
+//   Para activar el modo mock (sin red, datos ficticios) cambia
+//   `authRepositoryProvider` a `MockAuthRepository()`.
 // ============================================================
 
+import 'dart:io';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:unisalle/core/auth/token_storage.dart';
+import 'package:unisalle/core/network/api_client.dart';
 import 'package:unisalle/features/auth/data/auth_repository.dart';
-// import 'package:unisalle/features/auth/data/mock_auth_repository.dart'; // Activa para desarrollo sin red
+import 'package:unisalle/features/auth/data/backend_auth_service.dart';
 import 'package:unisalle/features/auth/data/remote_auth_repository.dart';
 import 'package:unisalle/models/user.dart';
 
-// ── Repository provider ───────────────────────────────────────────────────
-//
-// Punto único de inyección de la implementación de auth.
-//
-// Cambia la implementación aquí para alternar entre mock y real:
-//   MockAuthRepository()   — sin red, datos ficticios (desarrollo)
-//   RemoteAuthRepository() — OAuth real (producción / integración)
-//
-// ⚠️ RemoteAuthRepository.loginWithEmail y .registerWithEmail lanzan
-//    UnimplementedError hasta que el backend esté conectado.
-//    Usa MockAuthRepository para desarrollo de UI con email/password.
+// ── Servicios y dependencias ──────────────────────────────────────────────
+
+final backendAuthServiceProvider = Provider<BackendAuthService>((ref) {
+  final dio = ref.watch(apiClientProvider);
+  return BackendAuthService(dio);
+});
 
 final authRepositoryProvider = Provider<AuthRepository>((ref) {
-  return RemoteAuthRepository();
+  return RemoteAuthRepository(
+    backendAuth: ref.watch(backendAuthServiceProvider),
+    tokenStorage: ref.watch(tokenStorageProvider),
+  );
 });
 
 // ── Auth notifier ─────────────────────────────────────────────────────────
@@ -42,11 +41,10 @@ final authRepositoryProvider = Provider<AuthRepository>((ref) {
 class AuthNotifier extends AsyncNotifier<User?> {
   @override
   Future<User?> build() async {
-    // Estado inicial: no autenticado.
-    // TODO: Aquí podrías restaurar la sesión guardada localmente
-    //   (shared_preferences, flutter_secure_storage, etc.) para
-    //   mantener al usuario logueado entre reinicios de la app.
-    return null;
+    // Restaura la sesión persistida (JWT en secure storage). Si no hay
+    // token o el token está expirado, devuelve null y el router redirige
+    // al flujo de welcome/login.
+    return ref.read(authRepositoryProvider).restoreSession();
   }
 
   Future<void> login(String email, String password) async {
@@ -90,6 +88,17 @@ class AuthNotifier extends AsyncNotifier<User?> {
       // siempre redirija a /welcome al pulsar el botón de cerrar sesión.
     }
     state = const AsyncData(null);
+  }
+
+  /// Sube una nueva imagen de perfil al backend y refresca el usuario
+  /// expuesto por este notifier.
+  Future<void> updateProfileImage(File image) async {
+    final current = state.valueOrNull;
+    if (current == null) return;
+    final updated = await ref
+        .read(authRepositoryProvider)
+        .updateProfileImage(current.id, image);
+    state = AsyncData(updated);
   }
 }
 

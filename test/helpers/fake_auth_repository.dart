@@ -11,6 +11,8 @@
 //   - Ejecutar tests sin Firebase ni red
 // ============================================================
 
+import 'dart:io';
+
 import 'package:unisalle/features/auth/data/auth_repository.dart';
 import 'package:unisalle/models/user.dart';
 
@@ -71,5 +73,28 @@ class FakeAuthRepository implements AuthRepository {
   Future<void> logout() async {
     logoutCallCount++;
     if (logoutError != null) throw logoutError!;
+  }
+
+  // ── Restaurar sesión / actualizar imagen ────────────────────────────────
+
+  User? restoreSessionResult;
+  int restoreSessionCallCount = 0;
+
+  User? updateImageResult;
+  int updateImageCallCount = 0;
+  String? lastUpdateImageUserId;
+
+  @override
+  Future<User?> restoreSession() async {
+    restoreSessionCallCount++;
+    return restoreSessionResult;
+  }
+
+  @override
+  Future<User> updateProfileImage(String userId, File image) async {
+    updateImageCallCount++;
+    lastUpdateImageUserId = userId;
+    return updateImageResult ??
+        User(id: userId, name: 'Test User', email: 'fake@test.com');
   }
 }
