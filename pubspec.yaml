@@ -81,9 +81,27 @@ dependencies:
   # Usado en ProfileFormBloc para validaciones reactivas en tiempo real.
   rxdart: ^0.28.0
 
+  # HTTP CLIENT: Dio se usa para hablar con el backend Node.js
+  # (registro, login y subida de imagen de perfil). Ofrece interceptors
+  # para inyectar el JWT automáticamente en cada request.
+  dio: ^5.7.0
+
+  # SECURE STORAGE: Persiste el JWT del backend entre reinicios.
+  # En iOS usa Keychain; en Android, EncryptedSharedPreferences.
+  flutter_secure_storage: ^9.2.2
+
+  # IMAGE PICKER: Permite al usuario elegir una foto de la galería
+  # o tomar una con la cámara para actualizar su avatar.
+  image_picker: ^1.1.2
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
+
+  # MOCK ADAPTER PARA DIO: Permite interceptar requests HTTP en tests
+  # unitarios y devolver respuestas controladas, sin necesidad de
+  # levantar el backend.
+  http_mock_adapter: ^0.6.1
 
   # Linting rules that enforce Dart/Flutter best practices.
   # These catch common mistakes at compile time before they become bugs.

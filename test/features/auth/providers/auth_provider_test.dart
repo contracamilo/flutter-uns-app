@@ -173,5 +173,33 @@ void main() {
       expect(container.read(authProvider).value?.email, 'github@test.com');
       expect(container.read(isAuthenticatedProvider), isTrue);
     });
+
+    // ── restoreSession ────────────────────────────────────────────────────
+
+    group('restoreSession (build inicial)', () {
+      test('sin token guardado → AsyncData(null)', () async {
+        // FakeAuthRepository.restoreSession() devuelve null por defecto.
+        await container.read(authProvider.future);
+        expect(container.read(authProvider), const AsyncData<User?>(null));
+      });
+
+      test('con token válido → usuario autenticado al arrancar', () async {
+        final restored =
+            User(id: 'u9', name: 'Restored', email: 'r@test.com');
+        repo.restoreSessionResult = restored;
+
+        // Recreamos el container para forzar build() con el resultado nuevo.
+        container.dispose();
+        container = ProviderContainer(
+          overrides: [authRepositoryProvider.overrideWithValue(repo)],
+        );
+        addTearDown(container.dispose);
+
+        await container.read(authProvider.future);
+        expect(container.read(authProvider).value, restored);
+        expect(container.read(isAuthenticatedProvider), isTrue);
+        expect(repo.restoreSessionCallCount, 1);
+      });
+    });
   });
 }

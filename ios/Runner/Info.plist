@@ -98,5 +98,22 @@
 	<true/>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
+
+	<!--
+	  ══════════════════════════════════════════════════════════════════
+	  App Transport Security — DESARROLLO
+	  ══════════════════════════════════════════════════════════════════
+	  iOS bloquea por defecto las conexiones HTTP sin TLS. Para hablar
+	  con el backend Node.js corriendo en localhost durante desarrollo,
+	  habilitamos NSAllowsLocalNetworking (más restringido que
+	  NSAllowsArbitraryLoads — solo permite RFC 1918 / .local).
+
+	  Para producción: borrar esta clave y servir el backend con HTTPS.
+	-->
+	<key>NSAppTransportSecurity</key>
+	<dict>
+		<key>NSAllowsLocalNetworking</key>
+		<true/>
+	</dict>
 </dict>
 </plist>

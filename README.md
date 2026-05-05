@@ -107,3 +107,60 @@ Este proyecto usa [OpenSpec](https://github.com/Fission-AI/OpenSpec) para planif
 - **GoRouter** - Navegación declarativa con tabs
 - **Google Fonts** - Tipografía
 - **intl** - Formateo de números y monedas
+- **Dio + flutter_secure_storage** - HTTP client con interceptor JWT y persistencia segura del token
+
+## Backend de email/password
+
+El login con email/contraseña habla con un backend Node.js + Express + MySQL que vive en el repo hermano [`unisalle_backend`](https://github.com/contracamilo/unisalle-backend). Los flujos de Google y GitHub siguen sobre Firebase.
+
+### 1. Levantar el backend
+
+Desde el directorio del backend:
+
+```bash
+cd ../unisalle_backend
+cp .env.example .env   # ajusta DB_PASSWORD y JWT_SECRET
+docker compose up --build
+```
+
+El backend queda escuchando en `http://localhost:3000` y bindea `0.0.0.0` para que el dispositivo móvil pueda alcanzarlo en LAN.
+
+### 2. Configurar la URL base en la app
+
+Por defecto la app resuelve la URL según la plataforma:
+
+| Plataforma | URL por defecto |
+|------------|----------------|
+| Android emulator | `http://10.0.2.2:3000` |
+| iOS simulator / desktop / web | `http://localhost:3000` |
+
+Para un dispositivo físico en LAN, sobreescribir vía `--dart-define`:
+
+```bash
+flutter run --dart-define=API_BASE_URL=http://192.168.1.10:3000
+```
+
+O añadir la clave en `env/dev.json` y usar `--dart-define-from-file=env/dev.json` (ya configurado en `.vscode/launch.json`).
+
+### 3. Endpoints consumidos
+
+| Método | Endpoint | Cuándo se usa |
+|--------|----------|---------------|
+| POST | `/api/auth/register` | Pantalla de registro |
+| POST | `/api/auth/login` | Pantalla de login |
+| GET | `/api/users/me` | `restoreSession()` al arrancar la app |
+| PUT | `/api/users/:id/image` | Botón "Cambiar foto" en perfil |
+
+El JWT se guarda en `flutter_secure_storage` (Keychain en iOS, EncryptedSharedPreferences en Android) y se inyecta como `Authorization: Bearer <token>` por el interceptor de Dio.
+
+### 4. Flujos OAuth (Google / GitHub)
+
+Los OAuth siguen viviendo en Firebase Auth. Sus usuarios NO existen en MySQL — sus roles del backend estarán vacíos. Para cambiar la foto, el usuario debe hacerlo desde su cuenta de Google/GitHub.
+
+### 5. Troubleshooting
+
+**Android — `CleartextNotPermitted`**: el backend dev sirve HTTP. La app trae un `network_security_config.xml` que permite cleartext sólo para `localhost`, `10.0.2.2` y `127.0.0.1`. Para otra IP de LAN, añadirla en `android/app/src/main/res/xml/network_security_config.xml`.
+
+**iOS — `NSURLErrorDomain` -1022**: `NSAllowsLocalNetworking=true` está activo en `Info.plist`. Cubre 10.x / 192.168.x / .local. Para otra red, añadir el host en `NSAppTransportSecurity → NSExceptionDomains`.
+
+**`Connection refused`**: el backend no está corriendo, o la app está usando una URL incorrecta. Verifica con `curl http://<URL>/api/health`.

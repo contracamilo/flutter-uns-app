@@ -36,6 +36,7 @@ import 'package:unisalle/core/constants/app_sizes.dart';
 import 'package:unisalle/core/extensions/build_context_extensions.dart';
 import 'package:unisalle/features/auth/providers/auth_provider.dart';
 import 'package:unisalle/features/profile/presentation/bloc/profile_form_bloc.dart';
+import 'package:unisalle/features/profile/presentation/widgets/account_header.dart';
 import 'package:unisalle/features/profile/presentation/widgets/profile_text_field.dart';
 import 'package:unisalle/features/profile/providers/profile_provider.dart';
 
@@ -207,64 +208,70 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
 
   // ── Modo Vista (read-only) ──────────────────────────────────
   Widget _buildViewMode(Map<String, dynamic>? savedProfile) {
-    if (savedProfile == null) {
-      return Center(
-        child: Padding(
-          padding: const EdgeInsets.all(AppSizes.p32),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(
-                Icons.person_outline,
-                size: 96,
-                color: context.colorScheme.onSurfaceVariant.withValues(
-                  alpha: 0.4,
-                ),
-              ),
-              const SizedBox(height: AppSizes.p16),
-              Text(
-                'Perfil vacío',
-                style: context.textTheme.titleLarge,
-              ),
-              const SizedBox(height: AppSizes.p8),
-              Text(
-                'Toca el icono de editar para completar tu perfil',
-                style: context.textTheme.bodyMedium?.copyWith(
-                  color: context.colorScheme.onSurfaceVariant,
-                ),
-                textAlign: TextAlign.center,
-              ),
-            ],
-          ),
-        ),
-      );
-    }
+    final authUser = ref.watch(authProvider).valueOrNull;
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(AppSizes.p16),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const SizedBox(height: AppSizes.p8),
+          if (authUser != null) AccountHeader(user: authUser),
+          if (savedProfile == null)
+            _buildEmptyAcademicProfile()
+          else
+            _buildAcademicProfileCard(savedProfile),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildEmptyAcademicProfile() {
+    return Padding(
+      padding: const EdgeInsets.all(AppSizes.p32),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
           Icon(
-            Icons.account_circle,
-            size: 80,
-            color: context.colorScheme.primary,
-          ),
-          const SizedBox(height: AppSizes.p8),
-          Text(
-            savedProfile['nombre'] as String? ?? '',
-            style: context.textTheme.headlineSmall?.copyWith(
-              fontWeight: FontWeight.bold,
+            Icons.person_outline,
+            size: 64,
+            color: context.colorScheme.onSurfaceVariant.withValues(
+              alpha: 0.4,
             ),
           ),
+          const SizedBox(height: AppSizes.p16),
           Text(
+            'Perfil académico vacío',
+            style: context.textTheme.titleLarge,
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: AppSizes.p8),
+          Text(
+            'Toca el icono de editar para completar tu perfil',
+            style: context.textTheme.bodyMedium?.copyWith(
+              color: context.colorScheme.onSurfaceVariant,
+            ),
+            textAlign: TextAlign.center,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAcademicProfileCard(Map<String, dynamic> savedProfile) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Padding(
+          padding: const EdgeInsets.symmetric(vertical: AppSizes.p8),
+          child: Text(
             savedProfile['carrera'] as String? ?? '',
+            textAlign: TextAlign.center,
             style: context.textTheme.bodyLarge?.copyWith(
               color: context.colorScheme.onSurfaceVariant,
             ),
           ),
-          const SizedBox(height: AppSizes.p24),
-          Card(
+        ),
+        Card(
             child: Column(
               children: [
                 _buildInfoRow(
@@ -320,7 +327,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
             ),
           ),
         ],
-      ),
     );
   }
 
