@@ -1,27 +1,20 @@
 import 'dart:io';
 
 import 'package:dio/dio.dart';
-import 'package:unisalle/models/user.dart';
+import 'package:unisalle/features/auth/data/datasources/auth_remote_datasource.dart';
+import 'package:unisalle/features/auth/data/models/user_model.dart';
 
-/// Resultado de un login/registro contra el backend Node.js:
-/// el usuario formateado más el JWT firmado.
-class AuthSession {
-  const AuthSession({required this.user, required this.token});
-
-  final User user;
-  final String token;
-}
-
-/// Cliente del backend Node.js para los flujos de email/password
-/// y operaciones del usuario autenticado (`/me`, upload de imagen).
+/// Implementación de `AuthRemoteDataSource` contra el backend Node.js
+/// (`/auth/login`, `/auth/register`, `/users/me`, multipart).
 ///
-/// El JWT se inyecta automáticamente vía interceptor del `Dio`
+/// El JWT se inyecta automáticamente vía el interceptor del `Dio`
 /// (ver `core/network/api_client.dart`).
-class BackendAuthService {
-  BackendAuthService(this._dio);
+class BackendAuthDataSource implements AuthRemoteDataSource {
+  BackendAuthDataSource(this._dio);
 
   final Dio _dio;
 
+  @override
   Future<AuthSession> login(String email, String password) async {
     final res = await _dio.post(
       '/auth/login',
@@ -30,6 +23,7 @@ class BackendAuthService {
     return _sessionFromResponse(res);
   }
 
+  @override
   Future<AuthSession> register(
     String name,
     String email,
@@ -42,14 +36,16 @@ class BackendAuthService {
     return _sessionFromResponse(res);
   }
 
-  Future<User> me() async {
+  @override
+  Future<UserModel> me() async {
     final res = await _dio.get('/users/me');
-    final data = (res.data as Map<String, dynamic>)['user']
-        as Map<String, dynamic>;
-    return User.fromJson(data);
+    final data =
+        (res.data as Map<String, dynamic>)['user'] as Map<String, dynamic>;
+    return UserModel.fromJson(data);
   }
 
-  Future<User> updateProfileImage(String userId, File image) async {
+  @override
+  Future<UserModel> updateProfileImage(String userId, File image) async {
     final fileName = image.path.split(Platform.pathSeparator).last;
     final form = FormData.fromMap({
       'image': await MultipartFile.fromFile(image.path, filename: fileName),
@@ -59,15 +55,15 @@ class BackendAuthService {
       data: form,
       options: Options(contentType: 'multipart/form-data'),
     );
-    final data = (res.data as Map<String, dynamic>)['user']
-        as Map<String, dynamic>;
-    return User.fromJson(data);
+    final data =
+        (res.data as Map<String, dynamic>)['user'] as Map<String, dynamic>;
+    return UserModel.fromJson(data);
   }
 
   AuthSession _sessionFromResponse(Response<dynamic> res) {
     final body = res.data as Map<String, dynamic>;
     final token = body['token'] as String;
-    final user = User.fromJson(body['user'] as Map<String, dynamic>);
+    final user = UserModel.fromJson(body['user'] as Map<String, dynamic>);
     return AuthSession(user: user, token: token);
   }
 }
