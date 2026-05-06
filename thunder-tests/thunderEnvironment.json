@@ -1,0 +1,28 @@
+{
+  "clientName": "Thunder Client",
+  "_id": "unisalle-auth-env-2026-05-06",
+  "name": "UniSalle Local",
+  "default": true,
+  "data": [
+    {
+      "name": "baseUrl",
+      "value": "http://localhost:3000/api"
+    },
+    {
+      "name": "token",
+      "value": ""
+    },
+    {
+      "name": "userId",
+      "value": ""
+    },
+    {
+      "name": "testEmail",
+      "value": "ana@test.com"
+    },
+    {
+      "name": "testPassword",
+      "value": "password123"
+    }
+  ]
+}

@@ -1,0 +1,148 @@
+[
+  {
+    "_id": "unisalle-auth-collection-2026-05-06",
+    "colName": "UniSalle Auth",
+    "created": "2026-05-06T00:00:00.000Z",
+    "sortNum": 10000,
+    "folders": [
+      {
+        "_id": "auth-folder",
+        "name": "Auth",
+        "containerId": "",
+        "created": "2026-05-06T00:00:00.000Z",
+        "sortNum": 10000
+      },
+      {
+        "_id": "users-folder",
+        "name": "Users",
+        "containerId": "",
+        "created": "2026-05-06T00:00:00.000Z",
+        "sortNum": 20000
+      }
+    ],
+    "requests": [
+      {
+        "_id": "register-200",
+        "colId": "unisalle-auth-collection-2026-05-06",
+        "containerId": "auth-folder",
+        "name": "POST /auth/register — 200 OK",
+        "url": "{{baseUrl}}/auth/register",
+        "method": "POST",
+        "sortNum": 10000,
+        "created": "2026-05-06T00:00:00.000Z",
+        "headers": [],
+        "params": [],
+        "body": {
+          "type": "json",
+          "raw": "{\n  \"name\": \"Ana\",\n  \"email\": \"{{testEmail}}\",\n  \"password\": \"{{testPassword}}\"\n}",
+          "form": []
+        },
+        "tests": [
+          { "type": "res-code", "custom": "", "action": "equal", "value": "200" },
+          { "type": "json-query", "custom": "json.token", "action": "istype", "value": "string" },
+          { "type": "json-query", "custom": "json.user.email", "action": "equal", "value": "{{testEmail}}" },
+          { "type": "set-env-var", "custom": "token", "action": "setto", "value": "json.token" },
+          { "type": "set-env-var", "custom": "userId", "action": "setto", "value": "json.user.id" }
+        ]
+      },
+      {
+        "_id": "register-422",
+        "colId": "unisalle-auth-collection-2026-05-06",
+        "containerId": "auth-folder",
+        "name": "POST /auth/register — 422 Validation Error",
+        "url": "{{baseUrl}}/auth/register",
+        "method": "POST",
+        "sortNum": 20000,
+        "created": "2026-05-06T00:00:00.000Z",
+        "headers": [],
+        "params": [],
+        "body": {
+          "type": "json",
+          "raw": "{\n  \"name\": \"Ana\",\n  \"email\": \"bad\",\n  \"password\": \"1\"\n}",
+          "form": []
+        },
+        "tests": [
+          { "type": "res-code", "custom": "", "action": "in", "value": "400,422" },
+          { "type": "json-query", "custom": "json.errors", "action": "istype", "value": "array" }
+        ]
+      },
+      {
+        "_id": "login-200",
+        "colId": "unisalle-auth-collection-2026-05-06",
+        "containerId": "auth-folder",
+        "name": "POST /auth/login — 200 OK",
+        "url": "{{baseUrl}}/auth/login",
+        "method": "POST",
+        "sortNum": 30000,
+        "created": "2026-05-06T00:00:00.000Z",
+        "headers": [],
+        "params": [],
+        "body": {
+          "type": "json",
+          "raw": "{\n  \"email\": \"{{testEmail}}\",\n  \"password\": \"{{testPassword}}\"\n}",
+          "form": []
+        },
+        "tests": [
+          { "type": "res-code", "custom": "", "action": "equal", "value": "200" },
+          { "type": "json-query", "custom": "json.token", "action": "istype", "value": "string" },
+          { "type": "set-env-var", "custom": "token", "action": "setto", "value": "json.token" },
+          { "type": "set-env-var", "custom": "userId", "action": "setto", "value": "json.user.id" }
+        ]
+      },
+      {
+        "_id": "login-401",
+        "colId": "unisalle-auth-collection-2026-05-06",
+        "containerId": "auth-folder",
+        "name": "POST /auth/login — 401 Unauthorized",
+        "url": "{{baseUrl}}/auth/login",
+        "method": "POST",
+        "sortNum": 40000,
+        "created": "2026-05-06T00:00:00.000Z",
+        "headers": [],
+        "params": [],
+        "body": {
+          "type": "json",
+          "raw": "{\n  \"email\": \"{{testEmail}}\",\n  \"password\": \"wrong-password\"\n}",
+          "form": []
+        },
+        "tests": [
+          { "type": "res-code", "custom": "", "action": "equal", "value": "401" },
+          { "type": "json-query", "custom": "json.message", "action": "istype", "value": "string" }
+        ]
+      },
+      {
+        "_id": "users-me-200",
+        "colId": "unisalle-auth-collection-2026-05-06",
+        "containerId": "users-folder",
+        "name": "GET /users/me — 200 OK (Bearer)",
+        "url": "{{baseUrl}}/users/me",
+        "method": "GET",
+        "sortNum": 10000,
+        "created": "2026-05-06T00:00:00.000Z",
+        "headers": [
+          { "name": "Authorization", "value": "Bearer {{token}}" }
+        ],
+        "params": [],
+        "tests": [
+          { "type": "res-code", "custom": "", "action": "equal", "value": "200" },
+          { "type": "json-query", "custom": "json.user.email", "action": "istype", "value": "string" }
+        ]
+      },
+      {
+        "_id": "users-me-401",
+        "colId": "unisalle-auth-collection-2026-05-06",
+        "containerId": "users-folder",
+        "name": "GET /users/me — 401 (sin token)",
+        "url": "{{baseUrl}}/users/me",
+        "method": "GET",
+        "sortNum": 20000,
+        "created": "2026-05-06T00:00:00.000Z",
+        "headers": [],
+        "params": [],
+        "tests": [
+          { "type": "res-code", "custom": "", "action": "equal", "value": "401" }
+        ]
+      }
+    ]
+  }
+]

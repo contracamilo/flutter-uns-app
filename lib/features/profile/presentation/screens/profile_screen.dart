@@ -29,12 +29,13 @@
 // ============================================================
 
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:unisalle/core/constants/app_sizes.dart';
 import 'package:unisalle/core/extensions/build_context_extensions.dart';
-import 'package:unisalle/features/auth/providers/auth_provider.dart';
+import 'package:unisalle/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:unisalle/features/profile/presentation/bloc/profile_form_bloc.dart';
 import 'package:unisalle/features/profile/presentation/widgets/account_header.dart';
 import 'package:unisalle/features/profile/presentation/widgets/profile_text_field.dart';
@@ -94,7 +95,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
         _bloc.changeBirthDate(DateTime.tryParse(birthDateStr));
       }
     } else {
-      final user = ref.read(authProvider).valueOrNull;
+      final user = context.read<AuthBloc>().state.user;
       if (user != null && user.name.isNotEmpty) {
         _bloc.setInitialName(user.name);
       }
@@ -208,7 +209,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
 
   // ── Modo Vista (read-only) ──────────────────────────────────
   Widget _buildViewMode(Map<String, dynamic>? savedProfile) {
-    final authUser = ref.watch(authProvider).valueOrNull;
+    final authUser = context.watch<AuthBloc>().state.user;
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(AppSizes.p16),

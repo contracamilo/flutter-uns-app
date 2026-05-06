@@ -1,14 +1,14 @@
 // ============================================================
 // FILE: backend_auth_service_test.dart
-// PURPOSE: Tests unitarios de la integración con el backend Node.js.
+// PURPOSE: Tests unitarios del data source contra el backend Node.js.
 //
 // HERRAMIENTAS:
 //   - http_mock_adapter: intercepta requests del cliente Dio y devuelve
-//     respuestas controladas, sin necesidad de levantar el backend.
+//     respuestas controladas, sin levantar el backend.
 //
 // COBERTURA:
 //   - login OK / login 401
-//   - register OK / register 422 con errores por campo
+//   - register 400/422 con errors[] por campo
 //   - me OK / me 401 (token expirado)
 // ============================================================
 
@@ -18,7 +18,7 @@ import 'package:http_mock_adapter/http_mock_adapter.dart';
 import 'package:unisalle/core/auth/token_storage.dart';
 import 'package:unisalle/core/network/api_client.dart';
 import 'package:unisalle/core/network/api_exceptions.dart';
-import 'package:unisalle/features/auth/data/backend_auth_service.dart';
+import 'package:unisalle/features/auth/data/datasources/backend_auth_datasource.dart';
 
 class _InMemoryTokenStorage implements TokenStorage {
   String? _token;
@@ -37,17 +37,17 @@ void main() {
   late _InMemoryTokenStorage tokenStorage;
   late Dio dio;
   late DioAdapter adapter;
-  late BackendAuthService service;
+  late BackendAuthDataSource service;
 
   setUp(() {
     tokenStorage = _InMemoryTokenStorage();
     dio = buildApiClient(tokenStorage);
     adapter = DioAdapter(dio: dio);
-    service = BackendAuthService(dio);
+    service = BackendAuthDataSource(dio);
   });
 
   group('login', () {
-    test('200 OK → devuelve User + token', () async {
+    test('200 OK → devuelve UserModel + token', () async {
       adapter.onPost(
         '/auth/login',
         (req) => req.reply(200, {
@@ -82,8 +82,6 @@ void main() {
         data: {'email': 'x@test.com', 'password': 'wrong'},
       );
 
-      // Pre-cargamos un token para verificar que el interceptor lo limpia
-      // tras un 401.
       await tokenStorage.save('stale-token');
 
       Object? captured;
@@ -129,7 +127,7 @@ void main() {
   });
 
   group('me', () {
-    test('200 OK → devuelve User mapeado del payload', () async {
+    test('200 OK → devuelve UserModel mapeado del payload', () async {
       await tokenStorage.save('jwt-xyz');
 
       adapter.onGet(

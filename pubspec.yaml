@@ -94,6 +94,20 @@ dependencies:
   # o tomar una con la cámara para actualizar su avatar.
   image_picker: ^1.1.2
 
+  # BLoC: Gestión de estado para el módulo de autenticación bajo
+  # Clean Architecture. La presentación de auth depende de flutter_bloc
+  # mientras que el resto del proyecto sigue en Riverpod.
+  flutter_bloc: ^8.1.6
+  bloc: ^8.1.4
+
+  # EQUATABLE: Igualdad por valor para Entities, Events y States del
+  # módulo de auth, evitando boilerplate de == y hashCode.
+  equatable: ^2.0.5
+
+  # DARTZ: Either<Failure, Success> para los UseCases del dominio,
+  # de forma que los errores no atraviesen capas como excepciones.
+  dartz: ^0.10.1
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

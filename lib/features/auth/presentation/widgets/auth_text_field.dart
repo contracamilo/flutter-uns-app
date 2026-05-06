@@ -2,9 +2,14 @@ import 'package:flutter/material.dart';
 
 /// Reusable form input field for auth screens.
 ///
-/// When [obscureText] is true, a visibility-toggle icon is rendered
-/// in the suffix — the widget manages that state internally so the
-/// parent form doesn't need to track it.
+/// Soporta dos modos de validación:
+///   - **BLoC reactivo**: pasa `errorText` derivado del estado del BLoC
+///     y `onChanged` para emitir eventos de cambio. La validación es
+///     responsabilidad del BLoC, no del widget.
+///   - **Form clásico**: pasa `validator` para validación tradicional
+///     dentro de un `Form`/`FormField`.
+///
+/// Cuando [obscureText] es true, se renderiza un toggle de visibilidad.
 class AuthTextField extends StatefulWidget {
   final TextEditingController controller;
   final String label;
@@ -13,6 +18,9 @@ class AuthTextField extends StatefulWidget {
   final TextInputType keyboardType;
   final TextInputAction? textInputAction;
   final String? Function(String?)? validator;
+  final ValueChanged<String>? onChanged;
+  final ValueChanged<String>? onSubmitted;
+  final String? errorText;
 
   const AuthTextField({
     super.key,
@@ -23,6 +31,9 @@ class AuthTextField extends StatefulWidget {
     this.keyboardType = TextInputType.text,
     this.textInputAction,
     this.validator,
+    this.onChanged,
+    this.onSubmitted,
+    this.errorText,
   });
 
   @override
@@ -46,11 +57,13 @@ class _AuthTextFieldState extends State<AuthTextField> {
       keyboardType: widget.keyboardType,
       textInputAction: widget.textInputAction,
       validator: widget.validator,
+      onChanged: widget.onChanged,
+      onFieldSubmitted: widget.onSubmitted,
       decoration: InputDecoration(
         labelText: widget.label,
         prefixIcon: Icon(widget.prefixIcon),
         border: const OutlineInputBorder(),
-        // Show toggle only for password fields
+        errorText: widget.errorText,
         suffixIcon: widget.obscureText
             ? IconButton(
                 icon: Icon(

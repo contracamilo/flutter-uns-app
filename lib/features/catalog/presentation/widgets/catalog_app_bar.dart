@@ -21,11 +21,12 @@
 // ============================================================
 
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:unisalle/core/router/route_names.dart';
 import 'package:unisalle/core/theme/theme_provider.dart';
-import 'package:unisalle/features/auth/providers/auth_provider.dart';
+import 'package:unisalle/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:unisalle/features/catalog/providers/search_provider.dart';
 
 class CatalogAppBar extends ConsumerWidget implements PreferredSizeWidget {
@@ -83,7 +84,8 @@ class CatalogAppBar extends ConsumerWidget implements PreferredSizeWidget {
         IconButton(
           icon: const Icon(Icons.logout),
           tooltip: 'Cerrar sesión',
-          onPressed: () => ref.read(authProvider.notifier).logout(),
+          onPressed: () =>
+              context.read<AuthBloc>().add(const AuthLogoutRequested()),
         ),
       ],
     );
